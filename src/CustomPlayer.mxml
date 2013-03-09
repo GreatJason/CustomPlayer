@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx" 
+		 width="100%"
+		 creationComplete="init();">
+	<s:layout>
+		<s:VerticalLayout/>
+	</s:layout>
+	<fx:Declarations>
+		<!-- 将非可视元素（例如服务、值对象）放在此处 -->
+	</fx:Declarations>
+	
+	<fx:Script>
+		<![CDATA[
+			public static const VIDEO:String = "video";
+			
+			/**
+			 * 设置的音量
+			 * 不等同于播放对象的音量，在静音时不为0，仍然保持设置值
+			 */
+			[Bindable]
+			private var volume:Number;
+			
+			/**
+			 * 播放对象
+			 * 可选VideoElement和Audio两种类
+			 * 但是调用的接口方法类似，所以不限定类型
+			 */
+			[Bindable]
+			private var  playObject:*;
+			
+			/**
+			 * 源属性
+			 * 直接和播放对象的源挂钩
+			 */
+			[Bindable]
+			public function get source():Object{
+				return playObject.source;
+			}
+			
+			public function set source(value:Object):void{
+				setPlayable(value);
+			}
+			
+			/**
+			 * 显示在控制栏的额外信息
+			 */
+			private var _info:String;
+			
+			[Bindable]
+			public function get info():String{
+				return _info;
+			}
+			
+			public function set info(value:String):void{
+				_info=value;
+			}
+			
+			/**
+			 * 初始化
+			 * 默认播放是视频，音量值0.7
+			 */
+			private function init():void{
+				playObject = video;
+				volume = 0.7;
+			}
+			
+			public function play():void{
+				playObject.play();
+			}
+			
+			public function pause():void{
+				playObject.pause();
+			}
+			
+			/**
+			 * 切换播放和暂停
+			 */
+			public function switchPlayPause():void{
+				playObject.playing ? pause() : play();
+			}
+			
+			public function stop():void{
+				playObject.stop();
+			}
+			
+			private function setPlayable(source:Object):void{
+				videoContainer.visible = true;
+				playObject.source = source;
+			}
+			
+			private function format(value:Number):String{
+				var seconds:Number = value;
+				
+				var result:String = Math.floor(seconds % 60).toString();
+				
+				//如果seconds是1位数，在前面加0
+				if(result.length == 1){
+					result = Math.floor(seconds / 60).toString + ":0" + result;
+				} else{
+					result = Math.floor(seconds / 60).toString + ":" + result;
+				}
+				return result;
+			}
+		]]>
+	</fx:Script>
+	
+	<!-- 将播放对象的音量绑定为设置音量，如果静音了，则为0 -->
+	<fx:Binding destination="video.volume" source="muteBtn.selected ? 0 : volume"/>
+	
+	<!-- 视频播放对象，因为VideoElement不接受click事件，所以用一个Group包装 -->
+	<s:Group id="videoContainer"
+			 click="switchPlayPause();"
+			 width="100%"
+			 height="100%">
+		<s:VideoPlayer id="video"
+					   width="100%"
+					   height="100%"
+					   autoRewind="true"/>
+	</s:Group>
+	
+	<!-- 播放时间条，将值和播放对象的播放头时间双向绑定，这样就可以同步了 -->
+	<!-- 这里不采用s:HSlider组件，否则value的双向绑定会导致播放问题 -->
+	<mx:HSlider id="timeSlider"
+				width="100%"
+				minimum="0"
+				maximum="{playObject.totalTime}"
+				value="@{playObject.playheadTime}"
+				liveDragging="false"/>
+	
+	<s:Group width="100%">
+		<!-- 播放暂停按钮，采用切换按钮，切换播放和暂停 -->
+		<s:ToggleButton id="playPauseBtn"
+						label="{playObject.playing ? '暂停' : '播放'}"
+						width="54"
+						x="0"
+						selected="{playObject.playing}"
+						click="switchPlayPause();"/>
+		<!-- 停止按钮，停止播放 -->
+		<s:Button id="stopBtn"
+				  label="停止"
+				  click="stop();"
+				  x="60"
+				  width="52"/>
+		<s:Label id="time"
+				 x="119"
+				 width="76"
+				 text="{format(playObject.playheadTime)}/{format(playObject.totalTime)}"/>
+		
+		<!-- 静音按钮 -->
+		<s:ToggleButton id="muteBtn"
+						label="静音"
+						width="33"
+						x="218"/>
+		
+		<!-- 音量条，将值和设置的音量值双向绑定，而非播放对象的当前音量，因此不受静音影响 -->
+		<!-- 因为valueInterval默认为1，不合要求，更改为0（无值间隔） -->
+		<s:HSlider id="volumeSlider"
+				   width="86"
+				   x="252"
+				   y="5"
+				   minimum="0"
+				   maximum="1"
+				   snapInterval="0"
+				   value="{volume}"
+				   liveDragging="true"/>
+		
+		<!-- 信息标签，显示额外信息 -->
+		<mx:Label id="infoLabel"
+				  text="{info}"
+				  x="346"
+				  width="104"/>
+	</s:Group>
+	
+</s:Group>
